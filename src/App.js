@@ -4,11 +4,18 @@ import axios from 'axios';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import './App.css';
+import CreateGroup from './pages/CreateGroup';
+import GroupDetail from './pages/GroupDetail';
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || '$');
+
+  const handleCurrencyChange = (value) => {
+    setCurrency(value);
+    localStorage.setItem('currency', value);
+  };
 
   useEffect(() => {
     axios.get('/api/me')
@@ -17,7 +24,7 @@ function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="loading">Loading...</div>;
+  if (loading) return <div className="text-center p-12 text-lg">Loading...</div>;
 
   return (
     <Router>
@@ -29,7 +36,13 @@ function App() {
           user ? <Navigate to="/dashboard" /> : <Register />
         } />
         <Route path="/dashboard" element={
-          user ? <Dashboard username={user} onLogout={() => setUser(null)} /> : <Navigate to="/login" />
+          user ? <Dashboard username={user} onLogout={() => setUser(null)} currency={currency} onCurrencyChange={handleCurrencyChange} /> : <Navigate to="/login" />
+        } />
+        <Route path="/create-group" element={
+          user ? <CreateGroup username={user} onLogout={() => setUser(null)} currency={currency} onCurrencyChange={handleCurrencyChange} /> : <Navigate to="/login" />
+        } />
+        <Route path="/group/:id" element={
+          user ? <GroupDetail username={user} onLogout={() => setUser(null)} currency={currency} onCurrencyChange={handleCurrencyChange} /> : <Navigate to="/login" />
         } />
         <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
       </Routes>
