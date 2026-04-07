@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import mysql.connector
 import bcrypt
+from datetime import date, timedelta
 
 app = Flask(__name__)
 app.secret_key = 'splitwise-secret-key-2026'
@@ -151,6 +152,89 @@ def get_groups():
             g['created_at'] = str(g['created_at'])
 
     return jsonify({'groups': groups}), 200
+
+
+@app.route('/api/dashboard-summary', methods=['GET'])
+def get_dashboard_summary():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    user_id = session['user_id']
+    today = date.today()
+    start_day = today - timedelta(days=6)
+    day_order = []
+    day_totals = {}
+
+    for i in range(7):
+        current_day = start_day + timedelta(days=i)
+        key = current_day.isoformat()
+        day_order.append(key)
+        day_totals[key] = 0.0
+
+    conn = get_db()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("""
+        SELECT e.amount, DATE(e.created_at) as day
+        FROM expenses e
+        JOIN group_members gm ON gm.group_id = e.group_id
+        WHERE gm.user_id = %s
+          AND e.paid_by = %s
+          AND DATE(e.created_at) >= %s
+        ORDER BY e.created_at ASC
+    """, (user_id, user_id, start_day))
+    spent_rows = cur.fetchall()
+
+    cur.execute("""
+        SELECT COALESCE(SUM(e.amount), 0) as total
+        FROM expenses e
+        JOIN group_members gm ON gm.group_id = e.group_id
+        WHERE gm.user_id = %s
+          AND e.paid_by = %s
+    """, (user_id, user_id))
+    total_spent = float(cur.fetchone()['total'] or 0)
+
+    cur.execute("""
+        SELECT COUNT(DISTINCT gm.group_id) as total
+        FROM group_members gm
+        WHERE gm.user_id = %s
+    """, (user_id,))
+    total_groups = int(cur.fetchone()['total'] or 0)
+
+    cur.execute("""
+        SELECT COUNT(*) as total
+        FROM expenses e
+        JOIN group_members gm ON gm.group_id = e.group_id
+        WHERE gm.user_id = %s
+          AND e.paid_by = %s
+    """, (user_id, user_id))
+    total_expenses = int(cur.fetchone()['total'] or 0)
+
+    cur.close()
+    conn.close()
+
+    for row in spent_rows:
+        day_value = row['day'].isoformat() if row['day'] else None
+        if day_value in day_totals:
+            day_totals[day_value] += float(row['amount'])
+
+    spending_by_day = []
+    for key in day_order:
+        current_day = date.fromisoformat(key)
+        spending_by_day.append({
+            'date': key,
+            'label': current_day.strftime('%a'),
+            'amount': round(day_totals[key], 2)
+        })
+
+    return jsonify({
+        'summary': {
+            'total_spent': round(total_spent, 2),
+            'total_groups': total_groups,
+            'total_expenses': total_expenses,
+            'spending_by_day': spending_by_day
+        }
+    }), 200
 
 
 @app.route('/api/groups/<int:group_id>', methods=['GET'])
