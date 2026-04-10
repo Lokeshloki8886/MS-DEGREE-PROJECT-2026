@@ -968,6 +968,19 @@ body {
   color: var(--soft-text);
   cursor: pointer;
   font-weight: 700;
+  transition: color var(--transition-soft);
+}
+
+.table-action:hover {
+  color: var(--text);
+}
+
+.table-action--danger {
+  color: var(--danger);
+}
+
+.table-action--danger:hover {
+  color: color-mix(in srgb, var(--danger) 82%, white 18%);
 }
 
 .summary-row,
@@ -1242,15 +1255,15 @@ body {
 }
 
 .toast--success {
-  background: rgba(45, 95, 58, 0.96);
-  color: #eef8f1;
-  border-color: rgba(129, 242, 156, 0.3);
+  background: linear-gradient(180deg, rgba(28, 120, 66, 0.96), rgba(24, 102, 56, 0.98));
+  color: #f5fff8;
+  border-color: rgba(158, 255, 186, 0.34);
 }
 
 .toast--error {
-  background: rgba(108, 42, 42, 0.96);
-  color: #fff1f1;
-  border-color: rgba(255, 137, 137, 0.3);
+  background: linear-gradient(180deg, rgba(142, 44, 44, 0.96), rgba(118, 33, 33, 0.98));
+  color: #fff5f5;
+  border-color: rgba(255, 156, 156, 0.34);
 }
 
 .toast--neutral {
@@ -1266,14 +1279,28 @@ body {
 
 .toast__message {
   margin: 5px 0 0;
+  color: inherit;
+  opacity: 0.92;
 }
 
 .toast__close {
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
   color: inherit;
   cursor: pointer;
   font-weight: 700;
+  border-radius: 999px;
+  padding: 8px 12px;
+  flex-shrink: 0;
+  transition:
+    background-color var(--transition-soft),
+    border-color var(--transition-soft),
+    color var(--transition-soft);
+}
+
+.toast__close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.26);
 }
 
 @media (max-width: 1320px) {

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AppShell from '../components/AppShell';
+import ToastStack from '../components/ToastStack';
 import { classNames, formatCompactDate, formatCurrency, timeAgo } from '../lib/ui';
 import './Dashboard.css';
 
@@ -19,6 +20,8 @@ const STATUS_LABELS = {
   settled: 'Settled',
   quiet: 'Quiet'
 };
+
+const FLASH_TOAST_KEY = 'splitwise-flash-toast';
 
 function getGroupStatus(group) {
   if (!group.expenses.length) {
@@ -104,6 +107,7 @@ export default function Dashboard({ username, onLogout, currency, onCurrencyChan
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [toasts, setToasts] = useState([]);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -174,6 +178,34 @@ export default function Dashboard({ username, onLogout, currency, onCurrencyChan
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    const flashToast = window.localStorage.getItem(FLASH_TOAST_KEY);
+
+    if (!flashToast) {
+      return;
+    }
+
+    try {
+      const parsedToast = JSON.parse(flashToast);
+      setToasts([
+        {
+          id: Date.now() + Math.random(),
+          title: parsedToast.title,
+          message: parsedToast.message,
+          tone: parsedToast.tone || 'neutral'
+        }
+      ]);
+    } catch (error) {
+      // Ignore malformed flash-toast payloads.
+    }
+
+    window.localStorage.removeItem(FLASH_TOAST_KEY);
+  }, []);
+
+  const dismissToast = (toastId) => {
+    setToasts((current) => current.filter((toast) => toast.id !== toastId));
+  };
 
   const handleLogout = async () => {
     await axios.post('/api/logout');
@@ -293,6 +325,8 @@ export default function Dashboard({ username, onLogout, currency, onCurrencyChan
         { label: 'Create Group', to: '/create-group' }
       ]}
     >
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
       <div className="split-dashboard">
         <section className="split-kpi-grid">
           <article className="surface split-kpi-card">

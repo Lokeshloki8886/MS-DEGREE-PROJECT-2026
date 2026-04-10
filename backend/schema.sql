@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS expenses (
     paid_by INT NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
     description VARCHAR(255),
+    category VARCHAR(50) NOT NULL DEFAULT 'Other',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (group_id) REFERENCES `groups`(id),
     FOREIGN KEY (paid_by) REFERENCES users(id)

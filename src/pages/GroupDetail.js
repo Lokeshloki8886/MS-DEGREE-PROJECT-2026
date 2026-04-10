@@ -14,6 +14,8 @@ import {
   timeAgo
 } from '../lib/ui';
 
+const FLASH_TOAST_KEY = 'splitwise-flash-toast';
+
 function getMemberSnapshot(member, debts) {
   let owes = 0;
   let owed = 0;
@@ -61,13 +63,23 @@ function getMemberStatus(member) {
 }
 
 function buildCsv(expenses) {
-  const header = 'Description,Amount,Paid By,Split Count,Created\n';
+  const header = 'Description,Category,Amount,Paid By,Split Count,Created\n';
   const rows = expenses.map((expense) => (
-    `"${(expense.description || 'Untitled expense').replace(/"/g, '""')}",${expense.amount.toFixed(2)},${expense.paid_by},${expense.splits.length},"${expense.created_at}"`
+    `"${(expense.description || 'Untitled expense').replace(/"/g, '""')}","${(expense.category || 'Other').replace(/"/g, '""')}",${expense.amount.toFixed(2)},${expense.paid_by},${expense.splits.length},"${expense.created_at}"`
   ));
 
   return header + rows.join('\n');
 }
+
+const EXPENSE_CATEGORIES = [
+  'Food',
+  'Travel',
+  'Shopping',
+  'Rent',
+  'Bills',
+  'Entertainment',
+  'Other'
+];
 
 export default function GroupDetail({ username, onLogout, currency, onCurrencyChange }) {
   const { id } = useParams();
@@ -92,6 +104,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
   const [memberError, setMemberError] = useState('');
   const [expenseError, setExpenseError] = useState('');
   const [expenseDescription, setExpenseDescription] = useState('');
+  const [expenseCategory, setExpenseCategory] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expensePaidBy, setExpensePaidBy] = useState('');
   const [splitMembers, setSplitMembers] = useState([]);
@@ -101,6 +114,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
   const resetExpenseForm = (memberList = members) => {
     const currentUser = memberList.find((member) => member.username === username);
     setExpenseDescription('');
+    setExpenseCategory('');
     setExpenseAmount('');
     setExpenseError('');
     setExpensePaidBy(memberList.length ? String(currentUser?.id || memberList[0].id) : '');
@@ -263,7 +277,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
   const handleRemoveMember = async (member) => {
     try {
       await axios.delete(`/api/groups/${id}/members/${member.id}`);
-      pushToast('Member removed', `${member.username} was removed from the group.`, 'success');
+      pushToast('Member removed', `${member.username} was removed from the group.`, 'error');
       await refreshGroupData();
     } catch (error) {
       pushToast('Could not remove member', error.response?.data?.error || 'Try again.', 'error');
@@ -287,14 +301,15 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
     event.preventDefault();
     setExpenseError('');
 
-    if (!expenseAmount || !expensePaidBy || !splitMembers.length) {
-      setExpenseError('Amount, payer, and at least one split member are required.');
+    if (!expenseCategory || !expenseAmount || !expensePaidBy || !splitMembers.length) {
+      setExpenseError('Category, amount, payer, and at least one split member are required.');
       return;
     }
 
     try {
       await axios.post(`/api/groups/${id}/expenses`, {
         description: expenseDescription,
+        category: expenseCategory,
         amount: parseFloat(expenseAmount),
         paid_by: parseInt(expensePaidBy, 10),
         split_among: splitMembers
@@ -312,7 +327,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
   const handleDeleteExpense = async (expenseId) => {
     try {
       await axios.delete(`/api/groups/${id}/expenses/${expenseId}`);
-      pushToast('Expense deleted', 'The expense was removed from this group.', 'success');
+      pushToast('Expense deleted', 'The expense was removed from this group.', 'error');
       await refreshGroupData();
     } catch (error) {
       pushToast('Could not delete expense', error.response?.data?.error || 'Try again.', 'error');
@@ -338,6 +353,11 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
     try {
       if (confirmAction.type === 'delete-group') {
         await axios.delete(`/api/groups/${id}`);
+        window.localStorage.setItem(FLASH_TOAST_KEY, JSON.stringify({
+          title: 'Group deleted',
+          message: 'The group was deleted successfully.',
+          tone: 'error'
+        }));
         navigate('/dashboard');
         return;
       }
@@ -548,6 +568,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
                   <thead>
                     <tr>
                       <th>Description</th>
+                      <th>Category</th>
                       <th>Paid by</th>
                       <th>Split</th>
                       <th>Created</th>
@@ -564,6 +585,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
                             {expense.splits.map((split) => split.username).join(', ')}
                           </span>
                         </td>
+                        <td>{expense.category || 'Other'}</td>
                         <td>{expense.paid_by}</td>
                         <td>{expense.splits.length} member(s)</td>
                         <td>{formatDateTime(expense.created_at)}</td>
@@ -572,7 +594,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
                           {expense.paid_by === username && (
                             <button
                               type="button"
-                              className="table-action"
+                              className="table-action table-action--danger"
                               onClick={() => handleDeleteExpense(expense.id)}
                             >
                               Delete
@@ -743,7 +765,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
                       {isOwner && member.username !== username && (
                         <button
                           type="button"
-                          className="table-action"
+                          className="table-action table-action--danger"
                           onClick={() => handleRemoveMember(member)}
                         >
                           Remove
@@ -878,6 +900,24 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
               placeholder="Dinner, groceries, cab fare"
               required
             />
+          </div>
+
+          <div className="field">
+            <label className="field__label" htmlFor="expense-category">Category</label>
+            <select
+              id="expense-category"
+              className="app-select input"
+              value={expenseCategory}
+              onChange={(event) => setExpenseCategory(event.target.value)}
+              required
+            >
+              <option value="" disabled>Select category</option>
+              {EXPENSE_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="split-form-grid">

@@ -12,9 +12,19 @@ CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'Lokesh@7115',
+    'password':'Lokesh@7115',
     'database': 'splitwise'
 }
+
+EXPENSE_CATEGORIES = [
+    'Food',
+    'Travel',
+    'Shopping',
+    'Rent',
+    'Bills',
+    'Entertainment',
+    'Other'
+]
 
 
 def get_db():
@@ -438,6 +448,7 @@ def add_expense(group_id):
 
     data = request.get_json()
     description = data.get('description', '')
+    category = data.get('category') or 'Other'
     amount = data.get('amount')
     paid_by = data.get('paid_by')
     split_among = data.get('split_among', [])
@@ -452,6 +463,9 @@ def add_expense(group_id):
 
     if amount <= 0:
         return jsonify({'error': 'Amount must be greater than zero'}), 400
+
+    if category not in EXPENSE_CATEGORIES:
+        return jsonify({'error': 'Invalid category'}), 400
 
     conn = get_db()
     cur = conn.cursor(dictionary=True)
@@ -485,8 +499,8 @@ def add_expense(group_id):
             return jsonify({'error': 'One of the split members is not in this group'}), 400
 
     cur.execute(
-        "INSERT INTO expenses (group_id, paid_by, amount, description) VALUES (%s, %s, %s, %s)",
-        (group_id, paid_by, amount, description)
+        "INSERT INTO expenses (group_id, paid_by, amount, description, category) VALUES (%s, %s, %s, %s, %s)",
+        (group_id, paid_by, amount, description, category)
     )
     expense_id = cur.lastrowid
 
@@ -521,7 +535,7 @@ def get_expenses(group_id):
         return jsonify({'error': 'Not a member of this group'}), 403
 
     cur.execute("""
-        SELECT e.id, e.description, e.amount, e.created_at, e.paid_by as paid_by_id, u.username as paid_by
+        SELECT e.id, e.description, e.category, e.amount, e.created_at, e.paid_by as paid_by_id, u.username as paid_by
         FROM expenses e
         JOIN users u ON e.paid_by = u.id
         WHERE e.group_id = %s
@@ -530,6 +544,7 @@ def get_expenses(group_id):
     expenses = cur.fetchall()
 
     for expense in expenses:
+        expense['category'] = expense.get('category') or 'Other'
         expense['amount'] = float(expense['amount'])
         if expense['created_at']:
             expense['created_at'] = str(expense['created_at'])

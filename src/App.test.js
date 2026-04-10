@@ -25,6 +25,68 @@ function mockGetRoutes(routes) {
   });
 }
 
+function mockGroupDetailRoutes(expenses = [
+  {
+    id: 91,
+    description: 'Villa',
+    category: 'Travel',
+    amount: 400,
+    created_at: '2026-04-02T12:00:00',
+    paid_by: 'alex',
+    splits: [
+      { user_id: 1, username: 'alex', amount: 200 },
+      { user_id: 2, username: 'maya', amount: 200 }
+    ]
+  }
+]) {
+  mockGetRoutes({
+    '/api/me': { data: { username: 'alex' } },
+    '/api/groups/7': {
+      data: {
+        group: {
+          id: 7,
+          name: 'Goa Trip',
+          description: 'Beach weekend',
+          created_at: '2026-04-01T10:00:00',
+          created_by: 'alex'
+        },
+        members: [
+          { id: 1, username: 'alex', joined_at: '2026-04-01T10:00:00' },
+          { id: 2, username: 'maya', joined_at: '2026-04-01T10:10:00' }
+        ]
+      }
+    },
+    '/api/groups/7/expenses': {
+      data: {
+        expenses
+      }
+    },
+    '/api/groups/7/balances': {
+      data: {
+        balances: [{ from: 'maya', to: 'alex', amount: 200 }]
+      }
+    },
+    '/api/groups/7/simplified-debts': {
+      data: {
+        debts: [
+          {
+            from_user: 2,
+            from_username: 'maya',
+            to_user: 1,
+            to_username: 'alex',
+            amount: 200
+          }
+        ]
+      }
+    },
+    '/api/groups/7/settlements': {
+      data: {
+        settlements: []
+      }
+    }
+  });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
@@ -209,8 +271,126 @@ test('renders the splitwise dashboard shell with mocked data', async () => {
 });
 
 test('renders group detail modals in the premium workspace', async () => {
+  mockGroupDetailRoutes();
+
+  window.history.pushState({}, '', '/group/7');
+  render(<App />);
+
+  await screen.findByText(/expense ledger/i);
+  expect(screen.getByRole('columnheader', { name: /category/i })).toBeInTheDocument();
+  expect(screen.getByRole('cell', { name: 'Travel' })).toBeInTheDocument();
+
+  await userEvent.click(screen.getAllByRole('button', { name: /add expense/i })[0]);
+  const expenseDialog = await screen.findByRole('dialog');
+  expect(within(expenseDialog).getByText(/keep the existing splitwise logic/i)).toBeInTheDocument();
+  const categorySelect = within(expenseDialog).getByLabelText(/category/i);
+  expect(categorySelect).toBeInTheDocument();
+  expect(within(categorySelect).getByRole('option', { name: 'Food' })).toBeInTheDocument();
+  expect(within(categorySelect).getByRole('option', { name: 'Travel' })).toBeInTheDocument();
+  expect(within(categorySelect).getByRole('option', { name: 'Shopping' })).toBeInTheDocument();
+  expect(within(categorySelect).getByRole('option', { name: 'Rent' })).toBeInTheDocument();
+  expect(within(categorySelect).getByRole('option', { name: 'Bills' })).toBeInTheDocument();
+  expect(within(categorySelect).getByRole('option', { name: 'Entertainment' })).toBeInTheDocument();
+  expect(within(categorySelect).getByRole('option', { name: 'Other' })).toBeInTheDocument();
+  await userEvent.click(within(expenseDialog).getByRole('button', { name: /close modal/i }));
+
+  await userEvent.click(screen.getAllByRole('button', { name: /add member/i })[0]);
+  const memberDialog = await screen.findByRole('dialog');
+  expect(within(memberDialog).getByText(/search by username/i)).toBeInTheDocument();
+});
+
+test('submits expense category and includes it in csv export', async () => {
+  mockGroupDetailRoutes();
+
+  const originalBlob = global.Blob;
+  const blobSpy = jest.fn((parts, options) => new originalBlob(parts, options));
+  global.Blob = blobSpy;
+
+  const originalCreateObjectURL = window.URL.createObjectURL;
+  const originalRevokeObjectURL = window.URL.revokeObjectURL;
+  window.URL.createObjectURL = jest.fn(() => 'blob:expense-csv');
+  window.URL.revokeObjectURL = jest.fn();
+
+  const originalCreateElement = document.createElement.bind(document);
+  const clickMock = jest.fn();
+  const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation((tagName, options) => {
+    const element = originalCreateElement(tagName, options);
+
+    if (String(tagName).toLowerCase() === 'a') {
+      element.click = clickMock;
+    }
+
+    return element;
+  });
+
+  window.history.pushState({}, '', '/group/7');
+  render(<App />);
+
+  try {
+    await screen.findByText(/expense ledger/i);
+
+    await userEvent.click(screen.getAllByRole('button', { name: /add expense/i })[0]);
+    const expenseDialog = await screen.findByRole('dialog');
+
+    await userEvent.type(within(expenseDialog).getByLabelText(/description/i), 'Lunch');
+    await userEvent.selectOptions(within(expenseDialog).getByLabelText(/category/i), 'Food');
+    await userEvent.type(within(expenseDialog).getByLabelText(/amount/i), '125');
+    await userEvent.click(within(expenseDialog).getByRole('button', { name: /save expense/i }));
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(
+        '/api/groups/7/expenses',
+        expect.objectContaining({
+          description: 'Lunch',
+          category: 'Food',
+          amount: 125
+        })
+      );
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /export csv/i }));
+
+    expect(blobSpy).toHaveBeenCalled();
+    const csvText = blobSpy.mock.calls[0][0][0];
+    expect(csvText).toContain('Description,Category,Amount,Paid By,Split Count,Created');
+    expect(csvText).toContain('"Villa","Travel",400.00,alex,2,"2026-04-02T12:00:00"');
+    expect(window.URL.createObjectURL).toHaveBeenCalled();
+    expect(clickMock).toHaveBeenCalled();
+    expect(window.URL.revokeObjectURL).toHaveBeenCalledWith('blob:expense-csv');
+  } finally {
+    global.Blob = originalBlob;
+    window.URL.createObjectURL = originalCreateObjectURL;
+    window.URL.revokeObjectURL = originalRevokeObjectURL;
+    createElementSpy.mockRestore();
+  }
+});
+
+test('shows a dashboard notification after deleting a group', async () => {
   mockGetRoutes({
     '/api/me': { data: { username: 'alex' } },
+    '/api/dashboard-summary': {
+      data: {
+        summary: {
+          total_spent: 0,
+          total_groups: 0,
+          total_expenses: 0,
+          spending_by_day: [
+            { date: '2026-04-01', label: 'Wed', amount: 0 },
+            { date: '2026-04-02', label: 'Thu', amount: 0 },
+            { date: '2026-04-03', label: 'Fri', amount: 0 },
+            { date: '2026-04-04', label: 'Sat', amount: 0 },
+            { date: '2026-04-05', label: 'Sun', amount: 0 },
+            { date: '2026-04-06', label: 'Mon', amount: 0 },
+            { date: '2026-04-07', label: 'Tue', amount: 0 }
+          ]
+        }
+      }
+    },
+    '/api/groups': {
+      data: {
+        groups: []
+      }
+    },
     '/api/groups/7': {
       data: {
         group: {
@@ -221,44 +401,23 @@ test('renders group detail modals in the premium workspace', async () => {
           created_by: 'alex'
         },
         members: [
-          { id: 1, username: 'alex', joined_at: '2026-04-01T10:00:00' },
-          { id: 2, username: 'maya', joined_at: '2026-04-01T10:10:00' }
+          { id: 1, username: 'alex', joined_at: '2026-04-01T10:00:00' }
         ]
       }
     },
     '/api/groups/7/expenses': {
       data: {
-        expenses: [
-          {
-            id: 91,
-            description: 'Villa',
-            amount: 400,
-            created_at: '2026-04-02T12:00:00',
-            paid_by: 'alex',
-            splits: [
-              { user_id: 1, username: 'alex', amount: 200 },
-              { user_id: 2, username: 'maya', amount: 200 }
-            ]
-          }
-        ]
+        expenses: []
       }
     },
     '/api/groups/7/balances': {
       data: {
-        balances: [{ from: 'maya', to: 'alex', amount: 200 }]
+        balances: []
       }
     },
     '/api/groups/7/simplified-debts': {
       data: {
-        debts: [
-          {
-            from_user: 2,
-            from_username: 'maya',
-            to_user: 1,
-            to_username: 'alex',
-            amount: 200
-          }
-        ]
+        debts: []
       }
     },
     '/api/groups/7/settlements': {
@@ -271,14 +430,12 @@ test('renders group detail modals in the premium workspace', async () => {
   window.history.pushState({}, '', '/group/7');
   render(<App />);
 
-  await screen.findByText(/expense ledger/i);
+  await screen.findByText(/group workspace/i);
+  await userEvent.click(screen.getByRole('button', { name: /delete group/i }));
+  const dialog = await screen.findByRole('dialog');
+  await userEvent.click(within(dialog).getByRole('button', { name: /^confirm$/i }));
 
-  await userEvent.click(screen.getAllByRole('button', { name: /add expense/i })[0]);
-  const expenseDialog = await screen.findByRole('dialog');
-  expect(within(expenseDialog).getByText(/keep the existing splitwise logic/i)).toBeInTheDocument();
-  await userEvent.click(within(expenseDialog).getByRole('button', { name: /close modal/i }));
-
-  await userEvent.click(screen.getAllByRole('button', { name: /add member/i })[0]);
-  const memberDialog = await screen.findByRole('dialog');
-  expect(within(memberDialog).getByText(/search by username/i)).toBeInTheDocument();
+  await screen.findByText(/group deleted/i);
+  expect(screen.getByText(/the group was deleted successfully/i)).toBeInTheDocument();
+  expect(window.location.pathname).toBe('/dashboard');
 });
