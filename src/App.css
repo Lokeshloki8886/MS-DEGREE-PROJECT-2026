@@ -590,6 +590,37 @@ body {
   transform: none;
 }
 
+.quick-add-button {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  background:
+    radial-gradient(circle at 30% 30%, rgba(var(--accent-rgb), 0.24), transparent 70%),
+    color-mix(in srgb, var(--surface-strong) 92%, transparent);
+  color: var(--accent);
+  box-shadow: 0 12px 24px rgba(var(--accent-rgb), 0.12);
+  cursor: pointer;
+  transition:
+    transform var(--transition-soft),
+    border-color var(--transition-soft),
+    background-color var(--transition-soft),
+    color var(--transition-soft);
+}
+
+.quick-add-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(var(--accent-rgb), 0.42);
+}
+
+.quick-add-button__icon {
+  width: 18px;
+  height: 18px;
+}
+
 .stats-grid,
 .dashboard-strips,
 .insights-grid,
@@ -1195,6 +1226,79 @@ body {
   gap: 10px;
 }
 
+.category-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.category-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--soft-text);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform var(--transition-soft),
+    border-color var(--transition-soft),
+    background-color var(--transition-soft),
+    color var(--transition-soft),
+    box-shadow var(--transition-soft);
+}
+
+.category-option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(var(--accent-rgb), 0.24);
+}
+
+.category-option--active {
+  border-color: rgba(var(--accent-rgb), 0.34);
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--text);
+  box-shadow: 0 10px 22px rgba(var(--accent-rgb), 0.1);
+}
+
+.category-option__icon,
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+}
+
+.category-option__icon {
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.category-option__label {
+  font-weight: 700;
+}
+
+.category-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.category-badge {
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--track);
+  color: var(--soft-text);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1401,7 +1505,8 @@ body {
 
   .segment-legend,
   .info-grid,
-  .split-form-grid {
+  .split-form-grid,
+  .category-picker {
     grid-template-columns: 1fr;
   }
 

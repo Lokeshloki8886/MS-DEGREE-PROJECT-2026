@@ -12,7 +12,7 @@ CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    'password':'Lokesh@7115',
+    'password': 'Lokesh@7115',
     'database': 'splitwise'
 }
 

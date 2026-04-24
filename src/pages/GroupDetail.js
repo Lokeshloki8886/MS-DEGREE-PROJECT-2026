@@ -81,6 +81,95 @@ const EXPENSE_CATEGORIES = [
   'Other'
 ];
 
+const CATEGORY_META = {
+  Food: { label: 'Food' },
+  Travel: { label: 'Travel' },
+  Shopping: { label: 'Shopping' },
+  Rent: { label: 'Rent' },
+  Bills: { label: 'Bills' },
+  Entertainment: { label: 'Entertainment' },
+  Other: { label: 'Other' }
+};
+
+function CategoryIcon({ category, className = '' }) {
+  const iconClassName = classNames('category-icon', className);
+
+  switch (category) {
+    case 'Food':
+      return (
+        <svg viewBox="0 0 24 24" className={iconClassName} aria-hidden="true">
+          <path d="M7 3v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M10 3v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M7 7h3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8.5 11v10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M16 3c-1.8 1.8-2.4 4.1-2.4 6.2V21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'Travel':
+      return (
+        <svg viewBox="0 0 24 24" className={iconClassName} aria-hidden="true">
+          <path d="M3 14.5h18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M6.5 17.5h2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M15.5 17.5h2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M5 14.5l2.1-5.5a2 2 0 0 1 1.9-1.3h6a2 2 0 0 1 1.9 1.3L19 14.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="7.5" cy="17.5" r="1.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="16.5" cy="17.5" r="1.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      );
+    case 'Shopping':
+      return (
+        <svg viewBox="0 0 24 24" className={iconClassName} aria-hidden="true">
+          <path d="M6 8h12l-1.1 10.2a2 2 0 0 1-2 1.8H9.1a2 2 0 0 1-2-1.8L6 8Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M9 10V8a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'Rent':
+      return (
+        <svg viewBox="0 0 24 24" className={iconClassName} aria-hidden="true">
+          <path d="m4 11 8-6 8 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M6.5 10.5V19h11v-8.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M10 19v-4.5h4V19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'Bills':
+      return (
+        <svg viewBox="0 0 24 24" className={iconClassName} aria-hidden="true">
+          <path d="M7 4.5h10v15L15.2 18l-1.6 1.5L12 18l-1.6 1.5L8.8 18 7 19.5v-15Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M9.5 9h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M9.5 12.5h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'Entertainment':
+      return (
+        <svg viewBox="0 0 24 24" className={iconClassName} aria-hidden="true">
+          <rect x="5" y="6.5" width="14" height="11" rx="2.4" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="m10.5 10 4 2.1-4 2.1V10Z" fill="currentColor" />
+        </svg>
+      );
+    default:
+      return (
+        <svg viewBox="0 0 24 24" className={iconClassName} aria-hidden="true">
+          <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 8.5v4.3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="12" cy="16.5" r="1" fill="currentColor" />
+        </svg>
+      );
+  }
+}
+
+function QuickAddIcon({ className = '' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={classNames('quick-add-button__icon', className)} aria-hidden="true">
+      <path d="M12 5v14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function getCategoryMeta(category) {
+  return CATEGORY_META[category] || CATEGORY_META.Other;
+}
+
 export default function GroupDetail({ username, onLogout, currency, onCurrencyChange }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -97,28 +186,41 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
   const [toasts, setToasts] = useState([]);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(EXPENSE_CATEGORIES[0]);
 
   const [memberName, setMemberName] = useState('');
   const [memberSuggestions, setMemberSuggestions] = useState([]);
   const [memberError, setMemberError] = useState('');
   const [expenseError, setExpenseError] = useState('');
   const [expenseDescription, setExpenseDescription] = useState('');
-  const [expenseCategory, setExpenseCategory] = useState('');
+  const [expenseCategory, setExpenseCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expensePaidBy, setExpensePaidBy] = useState('');
   const [splitMembers, setSplitMembers] = useState([]);
+  const [submittingExpense, setSubmittingExpense] = useState(false);
 
   const isOwner = group?.created_by === username;
 
   const resetExpenseForm = (memberList = members) => {
     const currentUser = memberList.find((member) => member.username === username);
     setExpenseDescription('');
-    setExpenseCategory('');
+    setExpenseCategory(selectedCategory);
     setExpenseAmount('');
     setExpenseError('');
     setExpensePaidBy(memberList.length ? String(currentUser?.id || memberList[0].id) : '');
     setSplitMembers(memberList.map((member) => member.id));
+  };
+
+  const openExpenseModal = () => {
+    resetExpenseForm();
+    setShowExpenseModal(true);
+  };
+
+  const closeExpenseModal = () => {
+    resetExpenseForm();
+    setShowExpenseModal(false);
   };
 
   useEffect(() => {
@@ -301,18 +403,39 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
     event.preventDefault();
     setExpenseError('');
 
-    if (!expenseCategory || !expenseAmount || !expensePaidBy || !splitMembers.length) {
+    const normalizedDescription = expenseDescription.trim();
+    const parsedAmount = Number.parseFloat(expenseAmount);
+    const parsedPaidBy = Number.parseInt(expensePaidBy, 10);
+    const normalizedSplitMembers = [...new Set(splitMembers.map((memberId) => Number(memberId)))];
+
+    if (!normalizedDescription) {
+      setExpenseError('Description is required.');
+      return;
+    }
+
+    if (!expenseCategory || !expensePaidBy || !normalizedSplitMembers.length) {
       setExpenseError('Category, amount, payer, and at least one split member are required.');
       return;
     }
 
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setExpenseError('Enter a valid amount greater than zero.');
+      return;
+    }
+
+    if (!Number.isInteger(parsedPaidBy)) {
+      setExpenseError('Choose a valid payer.');
+      return;
+    }
+
     try {
+      setSubmittingExpense(true);
       await axios.post(`/api/groups/${id}/expenses`, {
-        description: expenseDescription,
+        description: normalizedDescription,
         category: expenseCategory,
-        amount: parseFloat(expenseAmount),
-        paid_by: parseInt(expensePaidBy, 10),
-        split_among: splitMembers
+        amount: parsedAmount,
+        paid_by: parsedPaidBy,
+        split_among: normalizedSplitMembers
       });
 
       pushToast('Expense added', 'The new expense is now part of this group.', 'success');
@@ -321,6 +444,8 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
       await refreshGroupData();
     } catch (error) {
       setExpenseError(error.response?.data?.error || 'Failed to add expense');
+    } finally {
+      setSubmittingExpense(false);
     }
   };
 
@@ -419,11 +544,23 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
       <div className="button-row">
         <button
           type="button"
+          className="quick-add-button"
+          onClick={openExpenseModal}
+          aria-label="Quick add expense"
+          title="Quick add expense"
+        >
+          <QuickAddIcon />
+        </button>
+        <button type="button" className="button button--secondary" onClick={() => setShowCategoryModal(true)}>
+          <span className="category-option__icon">
+            <CategoryIcon category={selectedCategory} />
+          </span>
+          {selectedCategory}
+        </button>
+        <button
+          type="button"
           className="button button--primary"
-          onClick={() => {
-            resetExpenseForm();
-            setShowExpenseModal(true);
-          }}
+          onClick={openExpenseModal}
         >
           Add expense
         </button>
@@ -502,7 +639,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
         </section>
 
         <section className="surface stat-card">
-          <div className="stat-label">You paid</div>
+          <div className="stat-label">Loki paid</div>
           <div className="stat-value">{formatCurrency(youPaid, currency)}</div>
           <div className="stat-meta">
             <span>Paid directly from this account</span>
@@ -547,10 +684,7 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
                 <button
                   type="button"
                   className="button button--primary button--small"
-                  onClick={() => {
-                    resetExpenseForm();
-                    setShowExpenseModal(true);
-                  }}
+                  onClick={openExpenseModal}
                 >
                   Add expense
                 </button>
@@ -585,7 +719,12 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
                             {expense.splits.map((split) => split.username).join(', ')}
                           </span>
                         </td>
-                        <td>{expense.category || 'Other'}</td>
+                        <td>
+                          <span className="category-badge">
+                            <CategoryIcon category={expense.category || 'Other'} />
+                            <span>{getCategoryMeta(expense.category).label}</span>
+                          </span>
+                        </td>
                         <td>{expense.paid_by}</td>
                         <td>{expense.splits.length} member(s)</td>
                         <td>{formatDateTime(expense.created_at)}</td>
@@ -868,20 +1007,17 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
 
       <Modal
         open={showExpenseModal}
-        onClose={() => {
-          resetExpenseForm();
-          setShowExpenseModal(false);
-        }}
+        onClose={closeExpenseModal}
         title="Add expense"
         description="Keep the existing Splitwise logic while entering a new shared expense in this premium workspace."
         size="lg"
         footer={(
           <div className="button-row">
-            <button type="button" className="button button--ghost" onClick={() => setShowExpenseModal(false)}>
+            <button type="button" className="button button--ghost" onClick={closeExpenseModal} disabled={submittingExpense}>
               Cancel
             </button>
-            <button type="submit" form="add-expense-form" className="button button--primary">
-              Save expense
+            <button type="submit" form="add-expense-form" className="button button--primary" disabled={submittingExpense}>
+              {submittingExpense ? 'Saving...' : 'Save expense'}
             </button>
           </div>
         )}
@@ -903,21 +1039,13 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
           </div>
 
           <div className="field">
-            <label className="field__label" htmlFor="expense-category">Category</label>
-            <select
-              id="expense-category"
-              className="app-select input"
-              value={expenseCategory}
-              onChange={(event) => setExpenseCategory(event.target.value)}
-              required
-            >
-              <option value="" disabled>Select category</option>
-              {EXPENSE_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+            <label className="field__label">Category</label>
+            <div className="category-badge">
+              <span className="category-option__icon">
+                <CategoryIcon category={expenseCategory} />
+              </span>
+              <span>{getCategoryMeta(expenseCategory).label}</span>
+            </div>
           </div>
 
           <div className="split-form-grid">
@@ -1017,6 +1145,44 @@ export default function GroupDetail({ username, onLogout, currency, onCurrencyCh
         )}
       >
         <div className="field__hint">This confirmation only changes the UI flow. The backend action remains unchanged.</div>
+      </Modal>
+
+      <Modal
+        open={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        title="Select Category"
+        description="Choose a default category for expenses. This will be applied when you add a new expense."
+        size="lg"
+        footer={(
+          <div className="button-row">
+            <button type="button" className="button button--ghost" onClick={() => setShowCategoryModal(false)}>
+              Done
+            </button>
+          </div>
+        )}
+      >
+        <div className="category-picker" role="radiogroup" aria-label="Select expense category">
+          {EXPENSE_CATEGORIES.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className={classNames(
+                'category-option',
+                selectedCategory === category && 'category-option--active'
+              )}
+              onClick={() => {
+                setSelectedCategory(category);
+                setShowCategoryModal(false);
+              }}
+              aria-pressed={selectedCategory === category}
+            >
+              <span className="category-option__icon">
+                <CategoryIcon category={category} />
+              </span>
+              <span className="category-option__label">{getCategoryMeta(category).label}</span>
+            </button>
+          ))}
+        </div>
       </Modal>
     </AppShell>
   );
